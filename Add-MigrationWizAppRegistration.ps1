@@ -120,6 +120,6 @@ Write-Output "Generated Client Secret: $($clientSecret.SecretText)"
 Write-Output "====================="
 
 # Copy to clipboard
-[Windows.Clipboard]::SetText($clientSecret.SecretText))
+[Windows.Clipboard]::SetText($clientSecret.SecretText)
 # Inform the user
 Write-Host "`nThe secret value is copied to the clipboard." -ForegroundColor Green
