@@ -24,6 +24,7 @@ $connectMgGraphParams = @{
 }
 
 try {
+    Write-Host "Connecting to Microsoft Graph." -ForegroundColor DarkGray
     Connect-MgGraph @connectMgGraphParams
 } catch {
     Write-Error "Failed to connect to Microsoft Graph: $_"
@@ -99,18 +100,20 @@ if (-not $sp) {
 $graphSpId = (Get-MgServicePrincipal -Filter "AppId eq '$exchangeOnlineAppId'").Id
 
 # Assigning Scopes (Delegated Permissions)
-New-MgOauth2PermissionGrant -ClientId $sp.Id -ConsentType "AllPrincipals" -ResourceId $graphSpId -Scope "EWS.AccessAsUser.All"
+New-MgOauth2PermissionGrant -ClientId $sp.Id -ConsentType "AllPrincipals" -ResourceId $graphSpId -Scope "EWS.AccessAsUser.All" | Out-Null
 
 # Assigning Roles (Application Permission)
-New-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $sp.Id -PrincipalId $sp.Id -AppRoleId $fullAccessId -ResourceId $graphSpId
+New-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $sp.Id -PrincipalId $sp.Id -AppRoleId $fullAccessId -ResourceId $graphSpId | Out-Null
 
 # Step 9: Add a New Password (Client Secret) to the Application
+$isoTimestamp  = (Get-Date).ToString("yyyy-MM-ddTHH-mm-ss")
+$csDisplayName = "$appDisplayName-$isoTimestamp"
 $pwdParams = @{
     ApplicationId      = $application.Id
     PasswordCredential = @{
         StartDateTime = (Get-Date)
         EndDateTime   = (Get-Date).AddYears(1)   # Password expires in 1 year
-        DisplayName   = "MigrationWiz"           # Customize as needed
+        DisplayName   = $csDisplayName           # Customize as needed
     }
 }
 
@@ -119,7 +122,11 @@ Write-Output "====================="
 Write-Output "Generated Client Secret: $($clientSecret.SecretText)"
 Write-Output "====================="
 
-# Copy to clipboard
-[Windows.Clipboard]::SetText($clientSecret.SecretText)
+# Copy the secret value to the Windows clipboard
+$clientSecret.SecretText | Set-Clipboard
 # Inform the user
-Write-Host "`nThe secret value is copied to the clipboard." -ForegroundColor Green
+Write-Host "`nThe secret value is copied to the clipboard and is valid for one year." -ForegroundColor Green
+
+# Step 10: Disconnect from Microsoft Graph
+Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
+Write-Host "Disconnected from Microsoft Graph." -ForegroundColor DarkGray
